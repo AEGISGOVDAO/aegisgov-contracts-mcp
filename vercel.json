@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "api/*.js", "use": "@vercel/node" }
+  ],
+  "routes": [
+    { "src": "/health", "dest": "/api/health.js" },
+    { "src": "/", "dest": "/api/index.js" },
+    { "src": "/.well-known/mcp.json", "dest": "/api/manifest.js" },
+    { "src": "/search", "methods": ["POST"], "dest": "/api/search.js" },
+    { "src": "/details", "methods": ["POST"], "dest": "/api/details.js" },
+    { "src": "/analyze", "methods": ["POST"], "dest": "/api/analyze.js" }
+  ]
+}
