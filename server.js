@@ -13,6 +13,7 @@ app.use(express.json());
 const WALLET = process.env.WALLET_ADDRESS;
 const NETWORK = process.env.X402_NETWORK || 'eip155:84532'; // Base Sepolia testnet (use eip155:8453 + CDP key for mainnet)
 const FACILITATOR_URL = process.env.X402_FACILITATOR || 'https://x402.org/facilitator';
+const DEMO_MODE = process.env.DEMO_MODE === 'true'; // Free demo — bypass payment until mainnet is live
 
 // ─── Health & Discovery (no payment required) ─────────────────────────────
 app.get('/health', (req, res) => {
@@ -24,7 +25,8 @@ app.get('/', (req, res) => {
   res.json({
     service: 'AegisGov Contract Intelligence MCP',
     description: 'Government contract data API for AI agents. Pay per use in USDC on Base.',
-    tools: ['POST /search ($0.01 USDC)', 'POST /details ($0.02 USDC)', 'POST /analyze ($0.05 USDC)'],
+    tools: ['POST /search (FREE DEMO)', 'POST /details (FREE DEMO)', 'POST /analyze (FREE DEMO)'],
+    demo_mode: DEMO_MODE,
     discovery: `${base}/.well-known/mcp.json`,
     payment_protocol: 'x402',
     network: 'Base (eip155:8453)',
@@ -48,7 +50,7 @@ app.get('/.well-known/mcp.json', (req, res) => {
         description: 'Search active US government contract opportunities. Filter by keywords, NAICS code, agency, or value.',
         endpoint: `${base}/search`,
         method: 'POST',
-        payment: { price: '$0.01 USDC', network: 'Base', protocol: 'x402' },
+        payment: DEMO_MODE ? { price: 'FREE', status: 'demo' } : { price: '$0.01 USDC', network: 'Base', protocol: 'x402' },
         input_schema: {
           type: 'object',
           properties: {
@@ -64,7 +66,7 @@ app.get('/.well-known/mcp.json', (req, res) => {
         description: 'Get full details for a specific contract opportunity including description, contacts, and deadlines.',
         endpoint: `${base}/details`,
         method: 'POST',
-        payment: { price: '$0.02 USDC', network: 'Base', protocol: 'x402' },
+        payment: DEMO_MODE ? { price: 'FREE', status: 'demo' } : { price: '$0.02 USDC', network: 'Base', protocol: 'x402' },
         input_schema: {
           type: 'object',
           required: ['noticeId'],
@@ -76,7 +78,7 @@ app.get('/.well-known/mcp.json', (req, res) => {
         description: 'AI-powered bid/no-bid analysis. Returns score 0-100, recommendation, strengths, risks, and competition level.',
         endpoint: `${base}/analyze`,
         method: 'POST',
-        payment: { price: '$0.05 USDC', network: 'Base', protocol: 'x402' },
+        payment: DEMO_MODE ? { price: 'FREE', status: 'demo' } : { price: '$0.05 USDC', network: 'Base', protocol: 'x402' },
         input_schema: {
           type: 'object',
           required: ['noticeId'],
@@ -124,6 +126,20 @@ function registerPaidRoutes() {
 
 // ─── Boot ─────────────────────────────────────────────────────────────────
 async function main() {
+  // In DEMO_MODE, skip x402 entirely — all routes are free
+  if (DEMO_MODE) {
+    console.log('🆓 DEMO MODE — payment bypassed, all tools free');
+    registerPaidRoutes();
+    const PORT = process.env.PORT || 3742;
+    app.listen(PORT, () => {
+      console.log('🦅 AegisGov Contract Intelligence MCP (DEMO)');
+      console.log(`   Port:    ${PORT}`);
+      console.log(`   Wallet:  ${WALLET}`);
+      console.log(`   Mode:    FREE DEMO`);
+    });
+    return;
+  }
+
   // Init x402 FIRST, then register paid routes so middleware intercepts them
   let x402Ready = false;
   try {
