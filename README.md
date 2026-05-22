@@ -2,42 +2,52 @@
 
 Real-time US government contract data for AI agents. **Currently free — no payment required.**
 
-**Live endpoint:** `https://aegisgov-contracts.vercel.app`
+**Live endpoint:** `https://aegisgov-contracts-mcp.vercel.app`
 
-> 🆓 **Free Demo Mode active.** All tools return real data at no cost. Payment (USDC/x402) will be enabled when Base mainnet support goes live. Use it now, build on it, no friction.
+> 🆓 **Free Demo Mode active.** All tools return real data at no cost. x402 USDC payments (Base mainnet + Solana mainnet) activate when ready.
 
 ## Tools
 
-| Tool | Status | Description |
-|------|--------|-------------|
-| `search_opportunities` | 🆓 Free | Search 33,000+ active SAM.gov contracts by keyword, NAICS, agency |
-| `get_opportunity_details` | 🆓 Free | Full contract details, contacts, deadlines |
-| `analyze_bid_potential` | 🆓 Free | AI bid/no-bid analysis with score, strengths, risks |
+| Tool | Endpoint | Description |
+|------|----------|-------------|
+| `search` | `POST /search` | Search 33,000+ active SAM.gov contracts by keyword, NAICS, agency |
+| `details` | `POST /details` | Full contract details, contacts, deadlines |
+| `analyze` | `POST /analyze` | AI bid/no-bid analysis with score, strengths, risks |
 
 ## Quick Start
 
 ```bash
-# Search active contracts — returns immediately, no auth needed
-curl -X POST https://aegisgov-contracts.vercel.app/search \
+# Search active contracts
+curl -X POST https://aegisgov-contracts-mcp.vercel.app/search \
   -H "Content-Type: application/json" \
   -d '{"keywords": "cybersecurity", "limit": 5}'
 
-# Get full details for a contract
-curl -X POST https://aegisgov-contracts.vercel.app/details \
+# Full contract details
+curl -X POST https://aegisgov-contracts-mcp.vercel.app/details \
   -H "Content-Type: application/json" \
   -d '{"noticeId": "<noticeId from search>"}'
 
 # AI bid/no-bid analysis
-curl -X POST https://aegisgov-contracts.vercel.app/analyze \
+curl -X POST https://aegisgov-contracts-mcp.vercel.app/analyze \
   -H "Content-Type: application/json" \
   -d '{"noticeId": "<noticeId>"}'
 ```
 
-## Discovery
+## MCP Discovery
 
 ```
-GET https://aegisgov-contracts.vercel.app/.well-known/mcp.json
+GET https://aegisgov-contracts-mcp.vercel.app/.well-known/mcp.json
 ```
+
+## Payment (x402)
+
+Uses [x402 protocol](https://x402.org) — HTTP 402 with USDC micropayments. No accounts. No API keys. Agents pay autonomously.
+
+**Supported networks:**
+- Base mainnet (`eip155:8453`) — USDC
+- Solana mainnet (`solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp`) — USDC
+
+**Facilitator:** [PayAI](https://payai.network) — free tier, no key required
 
 ## Why use this?
 
@@ -45,17 +55,14 @@ GET https://aegisgov-contracts.vercel.app/.well-known/mcp.json
 - **33,000+ live opportunities** — always current
 - **AI analysis built in** — bid scoring, risk flags, competition level
 - **Agent-native** — designed for MCP, works with Claude, GPT, any LLM toolchain
-- **x402 ready** — payment infrastructure in place for when monetization goes live
-
-## Payment (Coming Soon)
-
-Will use [x402 protocol](https://x402.org) — HTTP 402 with USDC micropayments on Base mainnet.
-No accounts. No API keys. Agents pay autonomously.
-
-```
-Wallet: 0x10Fae7881E5DB7fB5b4e8A84718fe66a691a5B52
-```
+- **Dual-network x402** — pay in USDC on Base or Solana
 
 ## Data Source
 
-[SAM.gov](https://sam.gov) — official US government contract database (beta.SAM.gov API)
+[SAM.gov](https://sam.gov) — official US government procurement data (FPDS/USASpending.gov)
+
+## Links
+
+- **Live:** https://aegisgov-contracts-mcp.vercel.app
+- **Docs:** https://aegisgov.ai/mcp
+- **GitHub:** https://github.com/AEGISGOVDAO/aegisgov-contracts-mcp
