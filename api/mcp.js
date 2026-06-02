@@ -3,6 +3,7 @@
 // Enables compatibility with Claude Desktop, Cursor, Cline, and Glama
 
 const { searchOpportunities, getOpportunityDetails, analyzeBidPotential } = require('../sam-api');
+const { requirePayment } = require('../lib/x402-handler');
 
 const SERVER_INFO = {
   name: 'aegisgov-contracts',
@@ -114,6 +115,23 @@ module.exports = async (req, res) => {
       case 'tools/call': {
         const { name, arguments: args = {} } = params || {};
         if (!name) return res.json(jsonrpcError(id, -32602, 'Missing tool name'));
+
+        // Payment gate — map each tool to its price and route path
+        const TOOL_PRICES = {
+          search_opportunities:   { price: '$0.01', path: '/search' },
+          get_opportunity_details: { price: '$0.02', path: '/details' },
+          analyze_bid_potential:  { price: '$0.05', path: '/analyze' },
+        };
+        const priceConfig = TOOL_PRICES[name];
+        if (priceConfig) {
+          // Spoof req.url so requirePayment resolves the correct route
+          const patchedReq = Object.assign(Object.create(Object.getPrototypeOf(req)), req, {
+            url: priceConfig.path,
+          });
+          const paid = await requirePayment(patchedReq, res, priceConfig.price);
+          if (!paid) return; // 402 already written to res
+        }
+
         const result = await handleToolCall(name, args);
         return res.json(jsonrpc(id, {
           content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
