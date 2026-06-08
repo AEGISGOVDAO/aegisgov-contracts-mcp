@@ -17,7 +17,7 @@ const CAPABILITIES = {
 const TOOLS = [
   {
     name: 'search_opportunities',
-    description: 'Search active US government contract opportunities from SAM.gov. Filter by keywords, NAICS code, agency, or dollar value.',
+    description: 'Search active US government contract opportunities from SAM.gov. Filter by keywords, NAICS code, agency, or dollar value. FREE — no payment required.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -32,7 +32,7 @@ const TOOLS = [
   },
   {
     name: 'get_opportunity_details',
-    description: 'Get full details for a specific SAM.gov contract opportunity by notice ID.',
+    description: 'Get full details for a specific SAM.gov contract opportunity by notice ID. FREE — no payment required.',
     inputSchema: {
       type: 'object',
       required: ['noticeId'],
@@ -43,7 +43,7 @@ const TOOLS = [
   },
   {
     name: 'analyze_bid_potential',
-    description: 'AI-powered bid/no-bid analysis for a government contract opportunity.',
+    description: 'AI-powered bid/no-bid analysis for a government contract opportunity. Requires x402 USDC payment ($0.05 on Base mainnet).',
     inputSchema: {
       type: 'object',
       required: ['noticeId'],
@@ -116,13 +116,12 @@ module.exports = async (req, res) => {
         const { name, arguments: args = {} } = params || {};
         if (!name) return res.json(jsonrpcError(id, -32602, 'Missing tool name'));
 
-        // Payment gate — map each tool to its price and route path
-        const TOOL_PRICES = {
-          search_opportunities:   { price: '$0.01', path: '/search' },
-          get_opportunity_details: { price: '$0.02', path: '/details' },
-          analyze_bid_potential:  { price: '$0.05', path: '/analyze' },
+        // Payment gate — search + details are FREE, analyze requires payment
+        // Free tier: zero friction to try the product; gate only on high-value AI analysis
+        const PAID_TOOLS = {
+          analyze_bid_potential: { price: '$0.05', path: '/analyze' },
         };
-        const priceConfig = TOOL_PRICES[name];
+        const priceConfig = PAID_TOOLS[name];
         if (priceConfig) {
           // Spoof req.url so requirePayment resolves the correct route
           const patchedReq = Object.assign(Object.create(Object.getPrototypeOf(req)), req, {
