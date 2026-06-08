@@ -1,18 +1,31 @@
 # AegisGov Contract Intelligence MCP
 
-Real-time US government contract data for AI agents. **Currently free — no payment required.**
+Real-time US government contract data for AI agents. Search and details are **completely free** — no API key, no payment, no signup.
 
 **Live endpoint:** `https://aegisgov-contracts-mcp.vercel.app`
 
-> 🆓 **Free Demo Mode active.** All tools return real data at no cost. x402 USDC payments (Base mainnet + Solana mainnet) activate when ready.
+## Add to Claude Desktop / Cline / Cursor in 60 seconds
+
+```json
+{
+  "mcpServers": {
+    "aegisgov-contracts": {
+      "url": "https://aegisgov-contracts-mcp.vercel.app/mcp",
+      "type": "streamable-http"
+    }
+  }
+}
+```
+
+That's it. Your agent can now search 33,000+ live US federal contract opportunities.
 
 ## Tools
 
-| Tool | Endpoint | Description |
-|------|----------|-------------|
-| `search` | `POST /search` | Search 33,000+ active SAM.gov contracts by keyword, NAICS, agency |
-| `details` | `POST /details` | Full contract details, contacts, deadlines |
-| `analyze` | `POST /analyze` | AI bid/no-bid analysis with score, strengths, risks |
+| Tool | Price | Description |
+|------|-------|-------------|
+| `search_opportunities` | 🆓 FREE | Search active SAM.gov contracts by keyword, NAICS, agency, value range |
+| `get_opportunity_details` | 🆓 FREE | Full contract details, contacts, deadlines by notice ID |
+| `analyze_bid_potential` | $0.05 USDC | AI bid/no-bid analysis with score, strengths, risks |
 
 ## Quick Start
 
