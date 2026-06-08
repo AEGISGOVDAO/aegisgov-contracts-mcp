@@ -2,9 +2,10 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.AEGISGOVDAO/aegisgov-contracts-mcp",
   "title": "Aegis Gov Contracts",
-  "description": "SAM.gov federal contracts: search, details, AI bid analysis. 33k+ live opportunities.",
+  "description": "SAM.gov federal contracts: search, details, AI bid analysis. 33k+ live opportunities. No API key needed.",
   "version": "1.0.0",
-  "websiteUrl": "https://aegisgov.ai",
+  "license": "MIT",
+  "websiteUrl": "https://aegisgov.ai/mcp",
   "repository": {
     "url": "https://github.com/AEGISGOVDAO/aegisgov-contracts-mcp",
     "source": "github"
@@ -12,7 +13,7 @@
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://aegisgov-contracts.vercel.app/mcp"
+      "url": "https://aegisgov-contracts-mcp.vercel.app/mcp"
     }
   ]
 }
