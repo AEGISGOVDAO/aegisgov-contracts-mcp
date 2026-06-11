@@ -17,39 +17,87 @@ const CAPABILITIES = {
 const TOOLS = [
   {
     name: 'search_opportunities',
-    description: 'Search active US government contract opportunities from SAM.gov. Filter by keywords, NAICS code, agency, or dollar value. FREE — no payment required.',
+    description: [
+      'Search live US federal contract opportunities published on SAM.gov.',
+      'Use this tool when the user wants to find, browse, or filter active government contracts — for example: "find cybersecurity contracts under $500K" or "show IT services RFPs from the Air Force".',
+      'Returns up to 25 opportunities per call (default 10), each with noticeId, title, agency, NAICS code, posted date, response deadline, and estimated value.',
+      'This tool is read-only and does not modify any data. Results reflect the live SAM.gov dataset (~33,000 active opportunities at any time).',
+      'Use get_opportunity_details to retrieve full text and contacts for a specific result. Use analyze_bid_potential for AI bid scoring.',
+      'All parameters are optional — omitting all returns the most recently posted opportunities.',
+    ].join(' '),
     inputSchema: {
       type: 'object',
       properties: {
-        keywords:  { type: 'string',  description: 'Search keywords' },
-        naics:     { type: 'string',  description: 'NAICS code filter' },
-        agency:    { type: 'string',  description: 'Agency name filter' },
-        minValue:  { type: 'number',  description: 'Minimum contract value USD' },
-        maxValue:  { type: 'number',  description: 'Maximum contract value USD' },
-        limit:     { type: 'integer', description: 'Max results (1-25)', default: 10 },
+        keywords: {
+          type: 'string',
+          description: 'Full-text search keywords. Examples: "cloud infrastructure", "cybersecurity assessment", "janitorial services". Searches title and description fields.',
+        },
+        naics: {
+          type: 'string',
+          description: 'Filter by NAICS industry code. Must be a 6-digit string. Examples: "541512" (Computer Systems Design), "336411" (Aircraft Manufacturing), "611710" (Educational Support Services).',
+        },
+        agency: {
+          type: 'string',
+          description: 'Filter by contracting agency name. Partial match supported. Examples: "Department of Defense", "Air Force", "Veterans Affairs", "DHS".',
+        },
+        minValue: {
+          type: 'number',
+          description: 'Minimum estimated contract value in USD. Example: 100000 filters out contracts under $100K.',
+        },
+        maxValue: {
+          type: 'number',
+          description: 'Maximum estimated contract value in USD. Example: 500000 excludes contracts above $500K.',
+        },
+        limit: {
+          type: 'integer',
+          description: 'Number of results to return. Integer between 1 and 25. Defaults to 10.',
+          default: 10,
+        },
       },
     },
   },
   {
     name: 'get_opportunity_details',
-    description: 'Get full details for a specific SAM.gov contract opportunity by notice ID. FREE — no payment required.',
+    description: [
+      'Retrieve the complete record for a single SAM.gov contract opportunity by its notice ID.',
+      'Use this tool after search_opportunities when the user wants full details on a specific contract — for example: "tell me more about that Air Force contract" or "what are the requirements and deadlines?".',
+      'Returns the full opportunity record including: complete description/statement of work, place of performance, response deadline, set-aside type (small business, 8(a), WOSB, etc.), primary contact name and email, attachments list, and amendment history.',
+      'This tool is read-only. The noticeId comes from the noticeId field in search_opportunities results.',
+      'Use analyze_bid_potential on the same noticeId to get an AI bid/no-bid recommendation.',
+    ].join(' '),
     inputSchema: {
       type: 'object',
       required: ['noticeId'],
       properties: {
-        noticeId: { type: 'string', description: 'SAM.gov notice ID' },
+        noticeId: {
+          type: 'string',
+          description: 'SAM.gov notice ID for the opportunity. Obtain this from the noticeId field returned by search_opportunities. Example: "a3f2b1c9d4e5f678901234567890abcd".',
+        },
       },
     },
   },
   {
     name: 'analyze_bid_potential',
-    description: 'AI-powered bid/no-bid analysis for a government contract opportunity. Requires x402 USDC payment ($0.05 on Base mainnet).',
+    description: [
+      'Run AI-powered bid/no-bid analysis on a specific US government contract opportunity.',
+      'Use this tool when the user wants a recommendation on whether to pursue a contract — for example: "should we bid on this?" or "what are our chances on this DoD contract?".',
+      'Returns: a numeric score from 0–100 (higher = stronger fit), a BID or NO-BID recommendation, a list of strengths, a list of risks, estimated competition level (low/medium/high), and a plain-language summary.',
+      'Optionally provide a companyProfile describing your company capabilities — this significantly improves the relevance of the analysis.',
+      'This tool requires a $0.05 USDC payment via x402 protocol on Base mainnet or Solana mainnet. The calling agent must include a valid X-Payment header.',
+      'Call get_opportunity_details first if you need the full contract text before analysis.',
+    ].join(' '),
     inputSchema: {
       type: 'object',
       required: ['noticeId'],
       properties: {
-        noticeId:    { type: 'string', description: 'SAM.gov notice ID' },
-        companyProfile: { type: 'string', description: 'Brief company description for fit analysis' },
+        noticeId: {
+          type: 'string',
+          description: 'SAM.gov notice ID for the opportunity to analyze. Obtain from search_opportunities results.',
+        },
+        companyProfile: {
+          type: 'string',
+          description: 'Optional. A 1–3 sentence description of the bidding company — capabilities, past performance, certifications (e.g. "Small 8(a) IT firm specializing in cloud migration with DoD clearance"). Improves analysis accuracy.',
+        },
       },
     },
   },
