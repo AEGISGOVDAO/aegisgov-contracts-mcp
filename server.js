@@ -21,7 +21,7 @@ app.get('/health', (req, res) => {
 });
 
 app.get('/', (req, res) => {
-  const base = process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3742}`;
+  const base = process.env.PUBLIC_URL || 'https://aegisgov-contracts-mcp.vercel.app';
   res.json({
     service: 'AegisGov Contract Intelligence MCP',
     description: 'Government contract data API for AI agents. Pay per use in USDC on Base.',
@@ -35,7 +35,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/.well-known/mcp.json', (req, res) => {
-  const base = process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3742}`;
+  const base = process.env.PUBLIC_URL || 'https://aegisgov-contracts-mcp.vercel.app';
   res.json({
     schema_version: '1.0',
     name: 'aegisgov-contracts',
