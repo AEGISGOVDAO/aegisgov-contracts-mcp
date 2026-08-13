@@ -1,10 +1,11 @@
 const { analyzeBidPotential } = require('../lib/sam');
-const { requirePayment } = require('../lib/x402-handler');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const paid = await requirePayment(req, res, '$0.05');
+  // Dual-rail payment: x402 Base USDC ($0.05) + Stripe SPT ($0.50 = 10-call bundle)
+  const { requirePayment } = await import('../lib/payment.mjs');
+  const paid = await requirePayment(req, res, '0.05', '0.50');
   if (!paid) return;
 
   try {

@@ -7,11 +7,17 @@ import type { TransactionRequestTempo } from './Transaction.js'
 
 export type Schema = Omit<DefaultCapabilitiesSchema, 'sendCalls'> & {
   fillTransaction: {
+    Request: FillTransactionRequestCapabilities
     ReturnType: FillTransactionCapabilities
   }
   sendCalls: {
     Request: ExactPartial<TransactionRequestTempo>
   }
+}
+
+export type FillTransactionRequestCapabilities = {
+  /** Whether to include `balanceDiffs` in the response. */
+  balanceDiffs?: boolean | undefined
 }
 
 export type FillTransactionCapabilities = {
@@ -58,6 +64,8 @@ export type FillTransactionCapabilities = {
       }
     | undefined
   sponsored?: boolean | undefined
+  /** Virtual-address resolutions keyed by lowercase literal virtual address. */
+  virtualAddresses?: Readonly<Record<Address, Address | null>> | undefined
 }
 
 export type BalanceDiff = {
