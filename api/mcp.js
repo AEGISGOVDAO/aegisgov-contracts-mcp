@@ -4,6 +4,7 @@
 
 const { searchOpportunities, getOpportunityDetails, analyzeBidPotential } = require('../sam-api');
 const { requirePayment } = require('../lib/x402-handler');
+const { logEvent } = require('../lib/logger');
 
 const SERVER_INFO = {
   name: 'aegisgov-contracts',
@@ -218,6 +219,7 @@ module.exports = async (req, res) => {
   try {
     switch (method) {
       case 'initialize':
+        logEvent('mcp_connect', 'server', { ua: req.headers['user-agent'] || '' }).catch(() => {});
         return res.json(jsonrpc(id, {
           protocolVersion: '2025-03-26',
           serverInfo: SERVER_INFO,
@@ -241,15 +243,21 @@ module.exports = async (req, res) => {
         };
         const priceConfig = PAID_TOOLS[name];
         if (priceConfig) {
+          logEvent('analyze_attempt', name, { ua: req.headers['user-agent'] || '' }).catch(() => {});
           // Spoof req.url so requirePayment resolves the correct route
           const patchedReq = Object.assign(Object.create(Object.getPrototypeOf(req)), req, {
             url: priceConfig.path,
           });
           const paid = await requirePayment(patchedReq, res, priceConfig.price);
           if (!paid) return; // 402 already written to res
+        } else {
+          logEvent('free_tool_call', name, { ua: req.headers['user-agent'] || '' }).catch(() => {});
         }
 
         const result = await handleToolCall(name, args);
+        if (priceConfig) {
+          logEvent('tool_success', name, { revenue_usdc: priceConfig.price }).catch(() => {});
+        }
         return res.json(jsonrpc(id, {
           content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
         }));
