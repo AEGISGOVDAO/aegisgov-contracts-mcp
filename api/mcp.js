@@ -5,6 +5,11 @@
 const { searchOpportunities, getOpportunityDetails, analyzeBidPotential } = require('../sam-api');
 const { requirePayment } = require('../lib/x402-handler');
 const { logEvent } = require('../lib/logger');
+const telemetry = require('../lib/telemetry');
+
+const _srv = 'contracts';
+function _ip(req) { return (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket?.remoteAddress; }
+function _ref(req) { return req.headers['referer'] || req.headers['referrer'] || ''; }
 
 const SERVER_INFO = {
   name: 'aegisgov-contracts',
@@ -249,9 +254,16 @@ module.exports = async (req, res) => {
             url: priceConfig.path,
           });
           const paid = await requirePayment(patchedReq, res, priceConfig.price);
-          if (!paid) return; // 402 already written to res
+          if (!paid) {
+            // 402 challenge issued — record payment attempt
+            telemetry.record({ server: _srv, tool: name, status: 402, payAttempt: true, ip: _ip(req), referrer: _ref(req) });
+            return;
+          }
+          // Payment verified
+          telemetry.record({ server: _srv, tool: name, status: 200, paid: true, ip: _ip(req), referrer: _ref(req) });
         } else {
           logEvent('free_tool_call', name, { ua: req.headers['user-agent'] || '' }).catch(() => {});
+          telemetry.record({ server: _srv, tool: name, status: 200, ip: _ip(req), referrer: _ref(req) });
         }
 
         const result = await handleToolCall(name, args);
