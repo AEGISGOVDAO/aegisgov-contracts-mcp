@@ -15,6 +15,10 @@ const NETWORK = process.env.X402_NETWORK || 'eip155:84532'; // Base Sepolia test
 const FACILITATOR_URL = process.env.X402_FACILITATOR || 'https://x402.org/facilitator';
 const DEMO_MODE = process.env.DEMO_MODE === 'true'; // Free demo — bypass payment until mainnet is live
 
+const { getOpportunityDetails, analyzeBidPotential } = require('./sam-api');
+
+const CANONICAL = process.env.PUBLIC_URL || 'https://aegisgov-contracts-mcp.vercel.app';
+
 // ─── Health & Discovery (no payment required) ─────────────────────────────
 app.get('/health', (req, res) => {
   res.json({ ok: true, service: 'aegisgov-contracts', version: '1.0.0', wallet: WALLET, network: NETWORK, uptime: process.uptime() });
@@ -94,8 +98,21 @@ function registerPaidRoutes() {
   app.post('/search', async (req, res) => {
     try {
       const { keywords, naics, agency, minValue, maxValue, limit } = req.body || {};
-      const result = await searchOpportunities({ keywords, naics, agency, minValue, maxValue, limit: limit || 10 });
-      res.json({ ok: true, ...result });
+      let { opportunities, ...rest } = await searchOpportunities({ keywords, naics, agency, minValue, maxValue, limit: limit || 10 });
+
+      // Inject next_action metadata into each opportunity
+      opportunities = opportunities.map(opp => ({
+        ...opp,
+        next_action: {
+          tool: "analyze_bid_potential",
+          description: "Get detailed AI analysis of bid potential for this opportunity, including score, recommendations, strengths, risks, and competition level.",
+          price: "$0.05 USDC (via x402)",
+          required_arguments: {
+            noticeId: opp.noticeId
+          }
+        }
+      }));
+      res.json({ ok: true, opportunities, ...rest });
     } catch (e) {
       res.status(500).json({ ok: false, error: e.message });
     }
