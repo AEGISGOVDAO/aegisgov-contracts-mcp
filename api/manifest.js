@@ -1,5 +1,8 @@
+// IMPORTANT: Always use the hardcoded canonical production URL.
+// Never use VERCEL_URL — that resolves to the current deployment preview URL, not production.
+const CANONICAL = 'https://aegisgov-contracts-mcp.vercel.app';
+
 module.exports = (req, res) => {
-  const base = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://aegisgov-contracts.vercel.app';
   res.json({
     schema_version: '1.0',
     name: 'aegisgov-contracts',
@@ -8,13 +11,16 @@ module.exports = (req, res) => {
     version: '1.0.0',
     author: 'AegisGov AI',
     homepage: 'https://aegisgov.ai',
+    // Canonical MCP endpoint — use this in all clients
+    mcp_endpoint: `${CANONICAL}/mcp`,
+    mcp_config: { url: `${CANONICAL}/mcp`, type: 'streamable-http' },
     tools: [
       {
         name: 'search_opportunities',
         description: 'Search active US government contract opportunities from SAM.gov. Supports keyword, NAICS code, and agency filters.',
-        endpoint: `${base}/search`,
-        method: 'POST',
-        payment: { price: '$0.01 USDC', network: 'Base Sepolia', protocol: 'x402' },
+        endpoint: `${CANONICAL}/mcp`,
+        method: 'POST (MCP streamable-http)',
+        payment: { price: 'FREE', note: 'search_opportunities is free with no payment required' },
         input_schema: {
           type: 'object',
           properties: {
@@ -28,9 +34,9 @@ module.exports = (req, res) => {
       {
         name: 'get_opportunity_details',
         description: 'Get complete details for a SAM.gov opportunity including description, contacts, deadline, and set-aside info.',
-        endpoint: `${base}/details`,
-        method: 'POST',
-        payment: { price: '$0.02 USDC', network: 'Base Sepolia', protocol: 'x402' },
+        endpoint: `${CANONICAL}/mcp`,
+        method: 'POST (MCP streamable-http)',
+        payment: { price: 'FREE', note: 'get_opportunity_details is free with no payment required' },
         input_schema: {
           type: 'object',
           required: ['noticeId'],
@@ -39,10 +45,10 @@ module.exports = (req, res) => {
       },
       {
         name: 'analyze_bid_potential',
-        description: 'AI-powered bid/no-bid analysis for a government contract. Returns score (0-100), BID/NO-BID/MONITOR recommendation, strengths, risks, and competition level estimate.',
-        endpoint: `${base}/analyze`,
-        method: 'POST',
-        payment: { price: '$0.05 USDC', network: 'Base Sepolia', protocol: 'x402' },
+        description: 'AI-powered bid/no-bid analysis for a government contract. Returns a score (0-100), BID/NO-BID/MONITOR recommendation, key strengths, risks, and estimated competition level.',
+        endpoint: `${CANONICAL}/mcp`,
+        method: 'POST (MCP streamable-http)',
+        payment: { price: '$0.05 USDC', network: 'Base mainnet (eip155:8453)', protocol: 'x402 + MPP/Stripe SPT', note: 'analyze_bid_potential requires payment' },
         input_schema: {
           type: 'object',
           required: ['noticeId'],

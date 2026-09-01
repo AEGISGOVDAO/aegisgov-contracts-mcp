@@ -11,6 +11,19 @@ const _srv = 'contracts';
 function _ip(req) { return (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket?.remoteAddress; }
 function _ref(req) { return req.headers['referer'] || req.headers['referrer'] || ''; }
 
+// Exclude our own canary/health-check calls from telemetry
+const CANARY_UA_PATTERNS = [
+  'aegisgov-canary',
+  'aegisgov-health',
+  'frank-audit',
+  'health-check',
+];
+function _isCanary(req) {
+  const ua = (req.headers['user-agent'] || '').toLowerCase();
+  const canaryHeader = req.headers['x-aegisgov-canary'];
+  return canaryHeader === '1' || CANARY_UA_PATTERNS.some(p => ua.includes(p));
+}
+
 const SERVER_INFO = {
   name: 'aegisgov-contracts',
   version: '1.0.0',
@@ -223,18 +236,26 @@ module.exports = async (req, res) => {
 
   try {
     switch (method) {
-      case 'initialize':
-        logEvent('mcp_connect', 'server', { ua: req.headers['user-agent'] || '' }).catch(() => {});
+      case 'initialize': {
+        const ua = req.headers['user-agent'] || '';
+        logEvent('mcp_connect', 'server', { ua }).catch(() => {});
+        if (!_isCanary(req)) {
+          telemetry.record({ server: _srv, tool: 'initialize', status: 200, ip: _ip(req), referrer: _ref(req) });
+        }
         return res.json(jsonrpc(id, {
           protocolVersion: '2025-03-26',
           serverInfo: SERVER_INFO,
           capabilities: CAPABILITIES,
         }));
+      }
 
       case 'notifications/initialized':
         return res.status(202).end();
 
       case 'tools/list':
+        if (!_isCanary(req)) {
+          telemetry.record({ server: _srv, tool: 'tools_list', status: 200, ip: _ip(req), referrer: _ref(req) });
+        }
         return res.json(jsonrpc(id, { tools: TOOLS }));
 
       case 'tools/call': {
@@ -256,14 +277,14 @@ module.exports = async (req, res) => {
           const paid = await requirePayment(patchedReq, res, priceConfig.price);
           if (!paid) {
             // 402 challenge issued — record payment attempt
-            telemetry.record({ server: _srv, tool: name, status: 402, payAttempt: true, ip: _ip(req), referrer: _ref(req) });
+            if (!_isCanary(req)) telemetry.record({ server: _srv, tool: name, status: 402, payAttempt: true, ip: _ip(req), referrer: _ref(req) });
             return;
           }
           // Payment verified
-          telemetry.record({ server: _srv, tool: name, status: 200, paid: true, ip: _ip(req), referrer: _ref(req) });
+          if (!_isCanary(req)) telemetry.record({ server: _srv, tool: name, status: 200, paid: true, ip: _ip(req), referrer: _ref(req) });
         } else {
           logEvent('free_tool_call', name, { ua: req.headers['user-agent'] || '' }).catch(() => {});
-          telemetry.record({ server: _srv, tool: name, status: 200, ip: _ip(req), referrer: _ref(req) });
+          if (!_isCanary(req)) telemetry.record({ server: _srv, tool: name, status: 200, ip: _ip(req), referrer: _ref(req) });
         }
 
         const result = await handleToolCall(name, args);
