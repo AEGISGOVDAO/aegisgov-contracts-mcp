@@ -21,7 +21,16 @@ const CANONICAL = process.env.PUBLIC_URL || 'https://aegisgov-contracts-mcp.verc
 
 // ─── Health & Discovery (no payment required) ─────────────────────────────
 app.get('/health', (req, res) => {
-  res.json({ ok: true, service: 'aegisgov-contracts', version: '1.0.0', wallet: WALLET, network: NETWORK, uptime: process.uptime() });
+  res.json({
+    ok: true,
+    service: 'aegisgov-contracts',
+    version: '1.0.0',
+    wallet: WALLET,
+    network: NETWORK,
+    uptime: process.uptime(),
+    git_commit_sha: process.env.VERCEL_GIT_COMMIT_SHA || 'unknown',
+    vercel_deployment_id: process.env.VERCEL_DEPLOYMENT_ID || 'unknown',
+  });
 });
 
 app.get('/', (req, res) => {
