@@ -166,8 +166,6 @@ async function main() {
     await resourceServer.initialize();
 
     const routes = {
-      'POST /search':  { accepts: [{ scheme: 'exact', price: '$0.01', network: NETWORK, payTo: WALLET }], description: 'Search SAM.gov contract opportunities' },
-      'POST /details': { accepts: [{ scheme: 'exact', price: '$0.02', network: NETWORK, payTo: WALLET }], description: 'Get full opportunity details' },
       'POST /analyze': { accepts: [{ scheme: 'exact', price: '$0.05', network: NETWORK, payTo: WALLET }], description: 'AI bid/no-bid analysis' },
     };
 
