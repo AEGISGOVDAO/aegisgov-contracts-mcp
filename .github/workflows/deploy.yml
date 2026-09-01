@@ -1,0 +1,39 @@
+name: Deploy to Vercel Production
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy to Vercel
+        id: deploy
+        run: |
+          DEPLOY_URL=$(npx vercel deploy --prod \
+            --token "${{ secrets.VERCEL_TOKEN }}" \
+            --scope "${{ secrets.VERCEL_TEAM_ID }}" \
+            --yes \
+            2>&1 | tail -1)
+          echo "deploy_url=$DEPLOY_URL" >> $GITHUB_OUTPUT
+          echo "Deployed to: $DEPLOY_URL"
+
+      - name: Verify /health on production
+        run: |
+          echo "Waiting 5s for production alias to propagate..."
+          sleep 5
+          RESPONSE=$(curl -sf https://aegisgov-contracts-mcp.vercel.app/health)
+          echo "Health response: $RESPONSE"
+          SHA=$(echo "$RESPONSE" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('git_commit_sha','MISSING'))")
+          echo "Deployed SHA: $SHA"
+          if [ "$SHA" != "${{ github.sha }}" ]; then
+            echo "SHA MISMATCH: expected ${{ github.sha }}, got $SHA"
+            exit 1
+          fi
+          echo "SHA verified ✅"
