@@ -3,8 +3,17 @@
 // Enables compatibility with Claude Desktop, Cursor, Cline, and Glama
 
 const { searchOpportunities, getOpportunityDetails, analyzeBidPotential } = require('../sam-api');
-const { requirePayment } = require('../lib/x402-handler');
 const { logEvent } = require('../lib/logger');
+
+// Lazy-load payment.mjs (ESM) once and cache — avoids re-import on warm Vercel instances
+let _requirePayment = null;
+async function getRequirePayment() {
+  if (!_requirePayment) {
+    const mod = await import('../lib/payment.mjs');
+    _requirePayment = mod.requirePayment;
+  }
+  return _requirePayment;
+}
 const telemetry = require('../lib/telemetry');
 
 const _srv = 'contracts';
@@ -264,17 +273,19 @@ module.exports = async (req, res) => {
 
         // Payment gate — search + details are FREE, analyze requires payment
         // Free tier: zero friction to try the product; gate only on high-value AI analysis
+        // evmAmount: USDC amount in decimal (no $ prefix); stripeAmount: USD bundle price
         const PAID_TOOLS = {
-          analyze_bid_potential: { price: '$0.05', path: '/analyze' },
+          analyze_bid_potential: { evmAmount: '0.05', stripeAmount: '0.50', path: '/analyze' },
         };
         const priceConfig = PAID_TOOLS[name];
         if (priceConfig) {
           logEvent('analyze_attempt', name, { ua: req.headers['user-agent'] || '' }).catch(() => {});
-          // Spoof req.url so requirePayment resolves the correct route
+          // Spoof req.url so payment challenge binds to a stable path
           const patchedReq = Object.assign(Object.create(Object.getPrototypeOf(req)), req, {
             url: priceConfig.path,
           });
-          const paid = await requirePayment(patchedReq, res, priceConfig.price);
+          const requirePayment = await getRequirePayment();
+          const paid = await requirePayment(patchedReq, res, priceConfig.evmAmount, priceConfig.stripeAmount);
           if (!paid) {
             // 402 challenge issued — record payment attempt
             if (!_isCanary(req)) telemetry.record({ server: _srv, tool: name, status: 402, payAttempt: true, ip: _ip(req), referrer: _ref(req) });
@@ -289,7 +300,7 @@ module.exports = async (req, res) => {
 
         const result = await handleToolCall(name, args);
         if (priceConfig) {
-          logEvent('tool_success', name, { revenue_usdc: priceConfig.price }).catch(() => {});
+          logEvent('tool_success', name, { revenue_usdc: priceConfig.evmAmount }).catch(() => {});
         }
         return res.json(jsonrpc(id, {
           content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
