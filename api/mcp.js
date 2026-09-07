@@ -4,6 +4,7 @@
 
 const { searchOpportunities, getOpportunityDetails, analyzeBidPotential } = require('../sam-api');
 const { logEvent } = require('../lib/logger');
+const { verifyKey, extractKey } = require('../lib/apikey');
 
 // Lazy-load payment.mjs (ESM) once and cache — avoids re-import on warm Vercel instances
 let _requirePayment = null;
@@ -280,19 +281,38 @@ module.exports = async (req, res) => {
         const priceConfig = PAID_TOOLS[name];
         if (priceConfig) {
           logEvent('analyze_attempt', name, { ua: req.headers['user-agent'] || '' }).catch(() => {});
-          // Spoof req.url so payment challenge binds to a stable path
-          const patchedReq = Object.assign(Object.create(Object.getPrototypeOf(req)), req, {
-            url: priceConfig.path,
-          });
-          const requirePayment = await getRequirePayment();
-          const paid = await requirePayment(patchedReq, res, priceConfig.evmAmount, priceConfig.stripeAmount);
-          if (!paid) {
-            // 402 challenge issued — record payment attempt
-            if (!_isCanary(req)) telemetry.record({ server: _srv, tool: name, status: 402, payAttempt: true, ip: _ip(req), referrer: _ref(req) });
-            return;
+
+          // Fast path: check API key first (Stripe-purchased key, no x402 needed)
+          const rawKey = extractKey(req);
+          if (rawKey) {
+            const keyPayload = verifyKey(rawKey);
+            if (keyPayload) {
+              // Valid API key — bypass x402
+              logEvent('api_key_auth', name, { email: keyPayload.email, plan: keyPayload.plan }).catch(() => {});
+              if (!_isCanary(req)) telemetry.record({ server: _srv, tool: name, status: 200, paid: true, ip: _ip(req), referrer: _ref(req) });
+            } else {
+              // Key present but invalid/expired — reject cleanly
+              return res.status(401).json({
+                error: 'Invalid or expired API key.',
+                renew: 'https://aegisgov-contracts-mcp.vercel.app/api/buy',
+              });
+            }
+          } else {
+            // No API key — fall through to x402 crypto payment
+            // Spoof req.url so payment challenge binds to a stable path
+            const patchedReq = Object.assign(Object.create(Object.getPrototypeOf(req)), req, {
+              url: priceConfig.path,
+            });
+            const requirePayment = await getRequirePayment();
+            const paid = await requirePayment(patchedReq, res, priceConfig.evmAmount, priceConfig.stripeAmount);
+            if (!paid) {
+              // 402 challenge issued — record payment attempt
+              if (!_isCanary(req)) telemetry.record({ server: _srv, tool: name, status: 402, payAttempt: true, ip: _ip(req), referrer: _ref(req) });
+              return;
+            }
+            // x402 payment verified
+            if (!_isCanary(req)) telemetry.record({ server: _srv, tool: name, status: 200, paid: true, ip: _ip(req), referrer: _ref(req) });
           }
-          // Payment verified
-          if (!_isCanary(req)) telemetry.record({ server: _srv, tool: name, status: 200, paid: true, ip: _ip(req), referrer: _ref(req) });
         } else {
           logEvent('free_tool_call', name, { ua: req.headers['user-agent'] || '' }).catch(() => {});
           if (!_isCanary(req)) telemetry.record({ server: _srv, tool: name, status: 200, ip: _ip(req), referrer: _ref(req) });
