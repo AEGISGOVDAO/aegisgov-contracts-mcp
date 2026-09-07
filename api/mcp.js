@@ -169,7 +169,7 @@ const TOOLS = [
       'Use this tool when the user wants a recommendation on whether to pursue a contract — for example: "should we bid on this?" or "what are our chances on this DoD contract?".',
       'Returns: a numeric score from 0–100 (higher = stronger fit), a BID or NO-BID recommendation, a list of strengths, a list of risks, estimated competition level (low/medium/high), and a plain-language summary.',
       'Optionally provide a companyProfile describing your company capabilities — this significantly improves the relevance of the analysis.',
-      'This tool requires a $0.05 USDC payment via x402 protocol on Base mainnet or Solana mainnet. The calling agent must include a valid X-Payment header.',
+      'This tool requires payment. Access is available via a $9/month API key (details at /api/buy) or a $0.05 USDC payment via x402 protocol on Base mainnet or Solana mainnet. For x402, the calling agent must include a valid X-Payment header.',
       'Call get_opportunity_details first if you need the full contract text before analysis.',
     ].join(' '),
     inputSchema: {
